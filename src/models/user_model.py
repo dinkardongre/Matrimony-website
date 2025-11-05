@@ -1,4 +1,4 @@
-from sqlalchemy import (Column, Integer, String, Boolean, Date, ForeignKey, Text, DateTime, Float, UniqueConstraint)
+from sqlalchemy import (Column, Integer, String, Boolean, Date, ForeignKey, Text, DateTime, Float)
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from src.db.db import Base
@@ -12,24 +12,41 @@ class User(Base):
     gender = Column(String(10), nullable=False)
     email = Column(String(120), unique=True, index=True, nullable=False)
     phone = Column(String(15), unique=True, nullable=False)
-    username = Column(String, nullable=False)
+    username = Column(String(100), nullable=False)
     hash_password = Column(String(255), nullable=False)
     otp = Column(String, nullable=True, default=None)
     date_of_birth = Column(Date)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now)
 
-    profile = relationship("Profile", back_populates="user", uselist=False)
-    subscription = relationship("Subscription", back_populates="user", uselist=False)
-    likes_sent = relationship("Like", foreign_keys='Like.liker_id', back_populates="liker")
-    likes_received = relationship("Like", foreign_keys='Like.liked_id', back_populates="liked")
+    profile = relationship(
+        "Profile",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False
+    )
+    subscription = relationship(
+        "Subscription",
+        back_populates="user",
+        uselist=False
+    )
+    likes_sent = relationship(
+        "Like",
+        foreign_keys="Like.liker_id",
+        back_populates="liker"
+    )
+    likes_received = relationship(
+        "Like",
+        foreign_keys="Like.liked_id",
+        back_populates="liked"
+    )
 
 
 class Profile(Base):
     __tablename__ = "profiles"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
     religion = Column(String(50))
     caste = Column(String(50))
     occupation = Column(String(100))
@@ -37,6 +54,10 @@ class Profile(Base):
     city = Column(String(100))
     bio = Column(Text)
     photo_url = Column(String(255))
+
+    height = Column(Float)
+    weight = Column(Float)
+    skin_color = Column(String(50))
 
     user = relationship("User", back_populates="profile")
 
@@ -79,8 +100,6 @@ class Like(Base):
     liker_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     liked_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime)
-
-    __table_args__ = (UniqueConstraint("liker_id", "liked_id", name="_unique_like_pair"),)
 
     liker = relationship("User", foreign_keys=[liker_id], back_populates="likes_sent")
     liked = relationship("User", foreign_keys=[liked_id], back_populates="likes_received")

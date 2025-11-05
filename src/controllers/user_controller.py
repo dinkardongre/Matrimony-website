@@ -13,7 +13,7 @@ def register(body: UserSchema, database: Session):
     currentUser = get_user_by_username(body.username, database)
     if currentUser:
         raise HTTPException(409, detail={"Error": "User already exists"})
-    
+
     hashed_pw = get_password_hash(body.password)
 
     user = User(
@@ -52,7 +52,7 @@ def login(body: LoginSchema, database: Session):
 
 def updatePassword(body:UpdatePasswordSchema,db:Session, user: User):
     currentUser = db.query(User).filter(User.id == user.id).first()
-    if not user:
+    if not currentUser:
         raise HTTPException(404, detail={"Error":"User not found"})
     
     if not verify_password(body.old_password, currentUser.hash_password):
@@ -97,20 +97,14 @@ def verifyOtp(body:VerifyOtpSchema, db:Session):
         raise HTTPException(404, detail={"Error":"otp is incorrect. Try again..."})
     
     hashed_pw = get_password_hash(body.new_password)
-
+    
     currentUser.hash_password = hashed_pw
     currentUser.otp = None
     db.commit()
     db.refresh(currentUser)
-
-
-    if body.new_password:
-        return {
-            "Status2":"Your password is updated.."
-        }
-    print(f"{currentUser.name} your account password is {currentUser.hash_password}")
+    
     return {
-        "Status":"Your account password is sent on your email address"
+        "Status2":"Your password is updated.."
     }
 
 def getUserProfile(db:Session, user:User):
@@ -127,7 +121,8 @@ def getUserProfile(db:Session, user:User):
             "email":user.email,
             "phone":user.phone,
             "Account creation":user.created_at
-        }
+        },
+        "Profile":user.profile
     }
 
 def updateUser(body:UserSchema, db:Session, user:User):
@@ -154,8 +149,10 @@ def deleteUser(db:Session, user:User):
 
     return {"Status":"User deleted successfully"}
 
-def createProfile(body:ProfileSchema, db:Session, user:User):
+def createUserProfile(body:ProfileSchema, db:Session, user:User):
     currentUser = db.query(User).filter(User.id == user.id).first()
+    if currentUser.profile:
+        raise HTTPException(404, detail={"Error":"User already have a profile"})
     if not currentUser:
         raise HTTPException(404, detail={"Error":"User not found"})
     userProfile = Profile(**body.model_dump(), user_id = user.id)
@@ -165,8 +162,8 @@ def createProfile(body:ProfileSchema, db:Session, user:User):
 
     return {"Status":"User profile created successfully"}
 
-def updateProfile(body:ProfileSchema, db:Session, user:Profile):
-    userProfile = db.query(Profile).filter(User.id == user.id).first()
+def updateUserProfile(body:ProfileSchema, db:Session, user:Profile):
+    userProfile = db.query(Profile).filter(Profile.user_id == user.id).first()
     if not userProfile:
         raise HTTPException(404, detail={"Error":"User's profile is not created right now."})
     data = body.model_dump()

@@ -35,3 +35,6 @@ class ProfileSchema(BaseModel):
     city : str
     bio : str
     photo_url : str
+    height : float
+    weight : float
+    skin_color : str
